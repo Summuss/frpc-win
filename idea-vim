@@ -1,0 +1,29 @@
+let mapleader = ","
+set showmode
+set number
+set hlsearch
+et incsearch
+set relativenumber
+set smartcase
+set keep-english-in-normal-and-restore-in-insert 
+set easymotion
+set clipboard=unnamedplus
+
+nnoremap d "_d
+vnoremap d "_d
+nnoremap xx Vx<Esc>
+nnoremap <Leader>c :noh<CR>
+nnoremap <Leader>j :m+
+nnoremap <Leader>jj :m+1<CR>
+nnoremap <Leader>k :move -
+nnoremap <Leader>kk :m-2<CR>
+nnoremap nn Lzz
+nnoremap cc Hzz
+nnoremap H ze
+nnoremap L zs
+inoremap ;; <Esc>A;
+map <Space> <Plug>(easymotion-prefix)
+map s <Plug>(easymotion-prefix)s
+
+
+set clipboard+=ideaput
