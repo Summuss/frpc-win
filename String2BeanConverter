@@ -1,0 +1,91 @@
+package com.karrytech.ktcc.client.plugin.mio.guangzhou2.utils;
+
+import com.google.common.base.Splitter;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@Slf4j
+public class String2BeanConverter {
+    private String datePattern = "yyyy-MM-dd";
+
+    private final StringSplitter stringSplitter;
+
+    private String2BeanConverter(@NonNull StringSplitter stringSplitter) {
+        this.stringSplitter = stringSplitter;
+    }
+
+    public String2BeanConverter datePattern(@NonNull String datePattern) {
+        this.datePattern = datePattern;
+        return this;
+    }
+
+    public static String2BeanConverter on(@NonNull String seperator) {
+        return new String2BeanConverter(
+                s -> Splitter.on(seperator).trimResults().splitToList(s));
+    }
+
+    public static String2BeanConverter splitter(StringSplitter stringSplitter) {
+        return new String2BeanConverter(stringSplitter);
+    }
+
+    public <T> T convertString2Bean(String s, @NonNull Class<T> clazz) {
+        if (s == null) {
+            return null;
+        }
+        try {
+            return doConversion(s, clazz);
+        } catch (InstantiationException | IllegalAccessException e) {
+            log.error(e.getMessage(), e);
+            throw new UnsupportedOperationException("创建目标类实例失败!");
+        }
+    }
+
+    private <T> T doConversion(String s, @NonNull Class<T> clazz)
+            throws InstantiationException, IllegalAccessException {
+        T result = clazz.newInstance();
+
+        List<String> valuesAfterSplit = stringSplitter.splitStringIntoFieldValueArray(s);
+
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isAnnotationPresent(Value.class)) {
+                String seqString = field.getAnnotation(Value.class).value();
+                int seq = Integer.parseInt(seqString);
+                String value = valuesAfterSplit.get(seq - 1);
+                field.setAccessible(true);
+                if ("null".equals(value)) {
+                    field.set(result, null);
+                    continue;
+                }
+                Class<?> fieldType = field.getType();
+                if (fieldType == String.class) {
+                    field.set(result, value);
+                } else if (fieldType == LocalDate.class) {
+                    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(datePattern);
+                    field.set(result, LocalDate.parse(value, dateTimeFormatter));
+
+                } else if (fieldType == Integer.class) {
+                    field.set(result, Integer.valueOf(value));
+                } else if (fieldType == BigDecimal.class) {
+                    field.set(result, new BigDecimal(value));
+                } else if (fieldType == Double.class) {
+                    field.set(result, Double.valueOf(value));
+                } else {
+                    throw new IllegalArgumentException(fieldType + " is not supported");
+                }
+            }
+        }
+        return result;
+    }
+
+    @FunctionalInterface
+    public interface StringSplitter {
+        List<String> splitStringIntoFieldValueArray(String s);
+    }
+}
